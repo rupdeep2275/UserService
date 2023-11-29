@@ -14,6 +14,7 @@ import com.example.userservice.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.MultiValueMapAdapter;
@@ -29,7 +30,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final SessionRepository sessionRepository;
     private final JwtUtil jwtUtil;
-    private final BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder bCryptPasswordEncoder;
 
     public LoginResponseDTO login(String email, String password) throws UserNotFoundException, InvalidCredtentialsException {
         Optional<User> userOptional = userRepository.findByEmail(email);
@@ -81,20 +82,21 @@ public class AuthService {
         return userRepository.save(user).toUserDTO();
     }
 
-    public SessionStatus validate(String token, Long userId) {
+    public Optional<UserDTO> validate(String token, Long userId) {
         Optional<Session> sessionOptional = sessionRepository.findByTokenAndUser_Id(token, userId);
         if (sessionOptional.isEmpty()){
-            return SessionStatus.INVALID;
+            return Optional.empty();
         }
         Session session = sessionOptional.get();
         if(!session.getSessionStatus().equals(SessionStatus.ACTIVE)){
-            return SessionStatus.EXPIRED;
+            return Optional.empty();
         }
         if (session.getExpiresAt().before(new Date())){
             session.setSessionStatus(SessionStatus.EXPIRED);
             sessionRepository.save(session);
-            return SessionStatus.EXPIRED;
+            return Optional.empty();
         }
-        return SessionStatus.ACTIVE;
+        User user = session.getUser();
+        return Optional.of(user.toUserDTO());
     }
 }

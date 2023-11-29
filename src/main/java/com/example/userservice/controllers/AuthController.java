@@ -51,8 +51,18 @@ public class AuthController {
     }
 
     @PostMapping("/validate")
-    public ResponseEntity<SessionStatus> validateToken(@RequestBody ValidateTokenRequestDTO validateTokenRequestDTO){
-        SessionStatus sessionStatus = authService.validate(validateTokenRequestDTO.getToken(), validateTokenRequestDTO.getUserId());
-        return new ResponseEntity<>(sessionStatus, HttpStatus.OK);
+    public ResponseEntity<ValidateTokenResponseDTO> validateToken(@RequestBody ValidateTokenRequestDTO validateTokenRequestDTO){
+        Optional<UserDTO> userDTOOptional= authService.validate(validateTokenRequestDTO.getToken(), validateTokenRequestDTO.getUserId());
+        if (userDTOOptional.isEmpty()){
+            ValidateTokenResponseDTO response = ValidateTokenResponseDTO.builder()
+                    .sessionStatus(SessionStatus.INVALID)
+                    .build();
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+        ValidateTokenResponseDTO response = ValidateTokenResponseDTO.builder()
+                .userDTO(userDTOOptional.get())
+                .sessionStatus(SessionStatus.ACTIVE)
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
